@@ -5,10 +5,13 @@ from tkinter import filedialog, messagebox, ttk
 import xml.etree.ElementTree as ET
 
 
+APP_VERSION = "1.0.1"
+
+
 class XmlConfigEditor(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("XML 配置编辑器")
+        self.title(f"WiFi XML 配置编辑器 v{APP_VERSION}")
         self.geometry("1180x760")
         self.minsize(900, 560)
 
@@ -101,7 +104,9 @@ class XmlConfigEditor(tk.Tk):
             "标准: 11bgn=WiFi4，11ac=WiFi5，11ax=WiFi6，11be=WiFi7；"
             "Standard 与 X_HW_Standard 会同时修改。\n"
             "11bgn + HT20=1 + 20MHz=锁定20MHz；HT20=0 + 20MHz=自动20/40MHz；"
-            "11be + HT20=3=自动20/40/80MHz，HT20=4=40MHz/160MHz。\n"
+            "11be + HT20=4 + 40MHz=锁定160MHz；"
+            "HT20=3 + 40MHz 可能锁80MHz或自动20/40/80MHz（取决于固件）。\n"
+            "WiFi7 的 HT20 也可能为空、0、1、2，实际效果需要设备实测；"
             "Channel=0 表示自动选择信道；密码写入 PreSharedKeyInstance 的 PreSharedKey。"
         )
         ttk.Label(quick_frame, text=help_text, justify="left", wraplength=760).grid(
@@ -165,7 +170,7 @@ class XmlConfigEditor(tk.Tk):
         self.search_matches = []
         self.search_index = -1
         self.populate_wifi_tree()
-        self.title(f"XML 配置编辑器 - {self.xml_path.name}")
+        self.title(f"WiFi XML 配置编辑器 v{APP_VERSION} - {self.xml_path.name}")
         if self.wlan_container is None:
             messagebox.showwarning("没有 WiFi 配置", "XML 中未找到 LANDevice/WLANConfiguration。")
             self.status_value.set("未找到 WLANConfiguration")
@@ -372,7 +377,7 @@ class XmlConfigEditor(tk.Tk):
 
         self.xml_path = path
         self.dirty = False
-        self.title(f"XML 配置编辑器 - {path.name}")
+        self.title(f"WiFi XML 配置编辑器 v{APP_VERSION} - {path.name}")
         self.status_value.set(f"已保存，备份: {path.name}.bak")
         return True
 
