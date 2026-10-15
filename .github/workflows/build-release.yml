@@ -1,0 +1,58 @@
+name: Build Windows EXE & Release
+
+# xml_config_editor.py 或本文件有更新就自动打包；
+# 也可以在 Actions 页面手动点 Run workflow 触发。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'xml_config_editor.py'
+      - '.github/workflows/build-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Read version from source
+        id: version
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path xml_config_editor.py -Pattern 'APP_VERSION = "([^"]+)"').Matches.Groups[1].Value
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Build EXE
+        run: pyinstaller --onefile --windowed --name WiFiXmlEditor xml_config_editor.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WiFiXmlEditor-${{ steps.version.outputs.version }}-win64
+          path: dist/WiFiXmlEditor.exe
+
+      - name: Publish to Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "v${{ steps.version.outputs.version }}"
+          $asset = "dist/WiFiXmlEditor.exe"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $asset --clobber
+          } else {
+            gh release create $tag $asset --title $tag --generate-notes
+          }
