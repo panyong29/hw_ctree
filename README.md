@@ -57,13 +57,7 @@
 
 ## 使用 EXE
 
-Windows 用户可以直接运行：
-
-```text
-dist/WiFiXmlEditor-1.0.1.exe
-```
-
-运行 EXE 不需要安装 Python。启动后点击“打开”选择 XML 文件。
+Windows 用户去 [Releases](https://github.com/panyong29/hw_ctree/releases) 页面下载最新版 `WiFiXmlEditor.exe`，不需要安装 Python。启动后点击“打开”选择 XML 文件。
 
 当前发布的 EXE 使用 Python 3.10 和 Tkinter 打包，适用于 Windows 10/11。Windows 7 的兼容性取决于系统补丁、运行库和显卡环境，建议在目标系统实测。
 
