@@ -5,7 +5,7 @@ from tkinter import filedialog, messagebox, ttk
 import xml.etree.ElementTree as ET
 
 
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 
 
 class XmlConfigEditor(tk.Tk):
@@ -24,6 +24,7 @@ class XmlConfigEditor(tk.Tk):
         self.selected_element = None
         self.search_matches = []
         self.search_index = -1
+        self.last_search_query = None
         self.dirty = False
 
         self._build_ui()
@@ -248,11 +249,39 @@ class XmlConfigEditor(tk.Tk):
             self.attribute_values[row_id] = name
         self.attribute_edit.delete(0, tk.END)
 
+    @staticmethod
+    def validate_wifi_inputs(ssid, password, channel):
+        """校验快速面板的输入。返回 (True, "")，或 (False, 错误信息)。"""
+        ssid = ssid.strip()
+        if not ssid:
+            return False, "SSID 无线名称不能为空。"
+        if len(ssid.encode("utf-8")) > 32:
+            return False, "SSID 不能超过 32 字节。"
+        if password and not 8 <= len(password) <= 63:
+            return False, "WiFi 密码长度必须在 8~63 位之间。"
+        channel = channel.strip()
+        if channel and (not channel.isdigit() or not 0 <= int(channel) <= 165):
+            return False, "信道必须是 0~165 的数字（0 表示自动选择信道）。"
+        return True, ""
+
     def apply_wifi_settings(self):
         if self.selected_element is None:
             return
 
+        ok, message = self.validate_wifi_inputs(
+            self.ssid_value.get(), self.password_value.get(), self.channel_value.get()
+        )
+        if not ok:
+            messagebox.showwarning("输入有误", message + "\n\n未做任何修改。")
+            return
+
         element = self.selected_element
+        password_node = element.find("./PreSharedKey/PreSharedKeyInstance")
+        original_password = password_node.get("PreSharedKey", "") if password_node is not None else ""
+        if original_password and not self.password_value.get():
+            if not messagebox.askyesno("确认清空密码", "密码已清空，写入后该 WiFi 将没有密码，确定吗？"):
+                return
+
         standard = self.standard_value.get().strip()
         if standard:
             # 设备配置要求这两个字段保持一致，否则标准可能显示与实际能力不符。
@@ -263,7 +292,6 @@ class XmlConfigEditor(tk.Tk):
         element.set("X_HW_OperatingChannelBandwidth", self.bandwidth_value.get().strip())
         element.set("Channel", self.channel_value.get().strip())
 
-        password_node = element.find("./PreSharedKey/PreSharedKeyInstance")
         if password_node is not None:
             password_node.set("PreSharedKey", self.password_value.get())
         else:
@@ -320,6 +348,9 @@ class XmlConfigEditor(tk.Tk):
         query = self.search_value.get().strip().lower()
         if not query or self.xml_root is None:
             return
+        if query != self.last_search_query:
+            self.last_search_query = query
+            self.search_index = -1
         self.search_matches = []
         for element_id, element in self.tree_nodes.items():
             searchable = [element.tag, element.text or ""]
